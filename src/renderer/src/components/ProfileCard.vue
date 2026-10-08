@@ -35,6 +35,7 @@
             </div>
         </div>
         <div class="actions">
+            <span class="profile-note" :title="profile.notes || t('noNotes')">{{ profile.notes || t('noNotes') }}</span>
             <button class="no-drag" @click="launch" :disabled="isLaunching">
                 <svg class="essentials-action-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
                 {{ isLaunching ? t('launchingStatus') : t('launch') }}
@@ -201,6 +202,20 @@ const remove = () => {
     height: 14px;
     margin-right: 0;
     margin-bottom: 0;
+}
+
+.profile-note {
+    margin-right: auto;
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 45%;
+    font-size: 11px;
+    color: var(--text-muted, #8a8f98);
+    opacity: 0.85;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    align-self: center;
 }
 
 :deep(.running-badge.launching) {
