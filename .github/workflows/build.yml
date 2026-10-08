@@ -8,11 +8,36 @@ on:
         required: false
         default: ''
         type: string
-      platforms:
-        description: 'Platforms to build (comma-separated). Available: mac-arm64, mac-x64, win-x64, win-arm64, linux-x64, linux-arm64. Use "all" for everything.'
-        required: true
-        default: 'all'
-        type: string
+      mac_arm64:
+        description: 'macOS ARM64 (dmg)'
+        required: false
+        default: false
+        type: boolean
+      mac_x64:
+        description: 'macOS x64 / Intel (dmg)'
+        required: false
+        default: false
+        type: boolean
+      win_x64:
+        description: 'Windows x64 (nsis + portable zip)'
+        required: false
+        default: false
+        type: boolean
+      win_arm64:
+        description: 'Windows ARM64 (nsis + portable zip)'
+        required: false
+        default: false
+        type: boolean
+      linux_x64:
+        description: 'Linux x64 (AppImage)'
+        required: false
+        default: false
+        type: boolean
+      linux_arm64:
+        description: 'Linux ARM64 (AppImage)'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -22,8 +47,8 @@ env:
   ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.cache/electron-builder
 
 jobs:
-  # Parse the comma-separated `platforms` input into a build matrix.
-  # `all` (default) expands to every platform.
+  # Build a matrix from the checked platform boxes.
+  # Errors out if no platform is selected.
   setup:
     runs-on: ubuntu-latest
     outputs:
@@ -32,31 +57,20 @@ jobs:
       - id: matrix
         shell: bash
         run: |
-          INPUT="${{ inputs.platforms }}"
-          # Normalize: lowercase, trim spaces.
-          INPUT=$(echo "$INPUT" | tr '[:upper:]' '[:lower:]' | tr -d ' ')
-
           ALL='[
-            {"key":"mac-arm64","platform":"macos-latest","os":"darwin","arch":"arm64","xray_asset":"Xray-macos-arm64-v8a.zip","build_cmd":"npm run build:mac"},
-            {"key":"mac-x64","platform":"macos-15-intel","os":"darwin","arch":"x64","xray_asset":"Xray-macos-64.zip","build_cmd":"npm run build:mac"},
-            {"key":"win-x64","platform":"windows-latest","os":"win32","arch":"x64","xray_asset":"Xray-windows-64.zip","build_cmd":"npm run build && npx electron-builder --win nsis zip --x64"},
-            {"key":"win-arm64","platform":"windows-latest","os":"win32","arch":"arm64","xray_asset":"Xray-windows-arm64-v8a.zip","build_cmd":"npm run build && npx electron-builder --win nsis zip --arm64"},
-            {"key":"linux-x64","platform":"ubuntu-latest","os":"linux","arch":"x64","xray_asset":"Xray-linux-64.zip","build_cmd":"npm run build:linux"},
-            {"key":"linux-arm64","platform":"ubuntu-24.04-arm","os":"linux","arch":"arm64","xray_asset":"Xray-linux-arm64-v8a.zip","build_cmd":"npm run build && npx electron-builder --linux --arm64"}
+            {"key":"mac-arm64","selected":${{ inputs.mac_arm64 }},"platform":"macos-latest","os":"darwin","arch":"arm64","xray_asset":"Xray-macos-arm64-v8a.zip","build_cmd":"npm run build:mac"},
+            {"key":"mac-x64","selected":${{ inputs.mac_x64 }},"platform":"macos-15-intel","os":"darwin","arch":"x64","xray_asset":"Xray-macos-64.zip","build_cmd":"npm run build:mac"},
+            {"key":"win-x64","selected":${{ inputs.win_x64 }},"platform":"windows-latest","os":"win32","arch":"x64","xray_asset":"Xray-windows-64.zip","build_cmd":"npm run build && npx electron-builder --win nsis zip --x64"},
+            {"key":"win-arm64","selected":${{ inputs.win_arm64 }},"platform":"windows-latest","os":"win32","arch":"arm64","xray_asset":"Xray-windows-arm64-v8a.zip","build_cmd":"npm run build && npx electron-builder --win nsis zip --arm64"},
+            {"key":"linux-x64","selected":${{ inputs.linux_x64 }},"platform":"ubuntu-latest","os":"linux","arch":"x64","xray_asset":"Xray-linux-64.zip","build_cmd":"npm run build:linux"},
+            {"key":"linux-arm64","selected":${{ inputs.linux_arm64 }},"platform":"ubuntu-24.04-arm","os":"linux","arch":"arm64","xray_asset":"Xray-linux-arm64-v8a.zip","build_cmd":"npm run build && npx electron-builder --linux --arm64"}
           ]'
 
-          if [ -z "$INPUT" ] || [ "$INPUT" = "all" ]; then
-            SELECTED="$ALL"
-          else
-            SELECTED=$(echo "$ALL" | jq -c --arg list "$INPUT" '
-              ($list | split(",")) as $keys
-              | map(select(.key as $k | $keys | index($k)))
-            ')
-          fi
-
+          SELECTED=$(echo "$ALL" | jq -c 'map(select(.selected == true))')
           COUNT=$(echo "$SELECTED" | jq 'length')
+
           if [ "$COUNT" -eq 0 ]; then
-            echo "::error::No valid platforms selected. Available: mac-arm64, mac-x64, win-x64, win-arm64, linux-x64, linux-arm64 (or \"all\")."
+            echo "::error::No platform selected. Please tick at least one platform checkbox and re-run."
             exit 1
           fi
 
