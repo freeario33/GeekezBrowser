@@ -5905,8 +5905,7 @@ const launchProfileHandler = async (event, profileId, watermarkStyle, preferredL
         const disabledFeatures = [
             'IsolateOrigins',
             'site-per-process',
-            'ExtensionsMenuAccessControl',
-            'WebGPU'
+            'ExtensionsMenuAccessControl'
         ];
         if (process.platform === 'win32') {
             disabledFeatures.push('StartupLaunch', 'StartupBoost');

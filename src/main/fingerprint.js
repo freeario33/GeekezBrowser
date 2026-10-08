@@ -6,12 +6,33 @@ const { applyStableCanvasNoise, isStableCanvasNoiseSeed } = require('./canvas-no
 const { selectStableMediaDevices } = require('./media-device-profile');
 const { selectStableVoices } = require('./voice-profile');
 
+// A wider resolution pool reduces collisions when many profiles run on one
+// host. Entries mirror real-world desktop/laptop panels (16:9, 16:10, 3:2).
 const RESOLUTIONS = [
     { w: 1920, h: 1080 },
     { w: 2560, h: 1440 },
     { w: 1366, h: 768 },
     { w: 1536, h: 864 },
-    { w: 1440, h: 900 }
+    { w: 1440, h: 900 },
+    { w: 1600, h: 900 },
+    { w: 1680, h: 1050 },
+    { w: 1920, h: 1200 },
+    { w: 2560, h: 1600 },
+    { w: 3840, h: 2160 },
+    { w: 1280, h: 720 },
+    { w: 1280, h: 800 },
+    { w: 1360, h: 768 },
+    { w: 1440, h: 960 },
+    { w: 1512, h: 982 },
+    { w: 1728, h: 1117 },
+    { w: 2048, h: 1152 },
+    { w: 2256, h: 1504 },
+    { w: 2736, h: 1824 },
+    { w: 3000, h: 2000 },
+    { w: 3072, h: 1920 },
+    { w: 3456, h: 2234 },
+    { w: 1280, h: 1024 },
+    { w: 1152, h: 864 }
 ];
 
 const BROWSER_MAJOR_VERSIONS = Array.from({ length: 19 }, (_, i) => 129 + i); // 129 - 147
@@ -57,6 +78,71 @@ const BROWSER_FULL_VERSION_BY_MAJOR = BROWSER_FULL_VERSION_POOL.reduce((acc, ver
     if (!acc[major].includes(version)) acc[major].push(version);
     return acc;
 }, {});
+
+// Wider hardware pools so many profiles on one host do not share the same
+// core/RAM fingerprint. Values reflect common real machines.
+const HARDWARE_CONCURRENCY_POOL = [2, 4, 4, 6, 8, 8, 10, 12, 12, 16, 20, 24, 32];
+const DEVICE_MEMORY_POOL = [2, 4, 4, 8, 8, 8, 16, 16, 32];
+
+// A broad, real timezone pool (IANA names). Weighted implicitly by repetition
+// toward widely used regions so the distribution still looks natural.
+const TIMEZONE_POOL = [
+    'America/New_York', 'America/New_York', 'America/Chicago', 'America/Denver',
+    'America/Los_Angeles', 'America/Los_Angeles', 'America/Phoenix',
+    'America/Toronto', 'America/Vancouver', 'America/Sao_Paulo', 'America/Mexico_City',
+    'Europe/London', 'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Europe/Berlin',
+    'Europe/Madrid', 'Europe/Rome', 'Europe/Amsterdam', 'Europe/Warsaw',
+    'Europe/Stockholm', 'Europe/Zurich', 'Europe/Moscow', 'Europe/Istanbul',
+    'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Shanghai', 'Asia/Hong_Kong',
+    'Asia/Singapore', 'Asia/Seoul', 'Asia/Taipei', 'Asia/Bangkok',
+    'Asia/Jakarta', 'Asia/Kolkata', 'Asia/Dubai', 'Asia/Riyadh',
+    'Australia/Sydney', 'Australia/Melbourne', 'Australia/Perth',
+    'Pacific/Auckland', 'Africa/Johannesburg', 'Africa/Lagos', 'Africa/Cairo'
+];
+
+// Map each timezone to its most plausible default UI language. Used only when
+// the profile did not pin an explicit language, so the locale stays coherent
+// with the chosen region instead of always following the host OS.
+const TIMEZONE_LANGUAGE_MAP = {
+    'America/New_York': ['en-US', 'en'],
+    'America/Chicago': ['en-US', 'en'],
+    'America/Denver': ['en-US', 'en'],
+    'America/Los_Angeles': ['en-US', 'en'],
+    'America/Phoenix': ['en-US', 'en'],
+    'America/Toronto': ['en-CA', 'en'],
+    'America/Vancouver': ['en-CA', 'en'],
+    'America/Sao_Paulo': ['pt-BR', 'pt'],
+    'America/Mexico_City': ['es-MX', 'es'],
+    'Europe/London': ['en-GB', 'en'],
+    'Europe/Paris': ['fr-FR', 'fr'],
+    'Europe/Berlin': ['de-DE', 'de'],
+    'Europe/Madrid': ['es-ES', 'es'],
+    'Europe/Rome': ['it-IT', 'it'],
+    'Europe/Amsterdam': ['nl-NL', 'nl'],
+    'Europe/Warsaw': ['pl-PL', 'pl'],
+    'Europe/Stockholm': ['sv-SE', 'sv'],
+    'Europe/Zurich': ['de-CH', 'de'],
+    'Europe/Moscow': ['ru-RU', 'ru'],
+    'Europe/Istanbul': ['tr-TR', 'tr'],
+    'Asia/Tokyo': ['ja-JP', 'ja'],
+    'Asia/Shanghai': ['zh-CN', 'zh'],
+    'Asia/Hong_Kong': ['zh-HK', 'zh'],
+    'Asia/Singapore': ['en-SG', 'en'],
+    'Asia/Seoul': ['ko-KR', 'ko'],
+    'Asia/Taipei': ['zh-TW', 'zh'],
+    'Asia/Bangkok': ['th-TH', 'th'],
+    'Asia/Jakarta': ['id-ID', 'id'],
+    'Asia/Kolkata': ['en-IN', 'en'],
+    'Asia/Dubai': ['ar-AE', 'ar'],
+    'Asia/Riyadh': ['ar-SA', 'ar'],
+    'Australia/Sydney': ['en-AU', 'en'],
+    'Australia/Melbourne': ['en-AU', 'en'],
+    'Australia/Perth': ['en-AU', 'en'],
+    'Pacific/Auckland': ['en-NZ', 'en'],
+    'Africa/Johannesburg': ['en-ZA', 'en'],
+    'Africa/Lagos': ['en-NG', 'en'],
+    'Africa/Cairo': ['ar-EG', 'ar']
+};
 
 const WEBGL_CATALOG = {
     windows: [
@@ -646,6 +732,15 @@ function normalizeLanguages(language, languages) {
     return ['en-US', 'en'];
 }
 
+function isAutoTimezoneValue(value) {
+    const normalized = String(value || '').trim().toLowerCase();
+    return !normalized ||
+        normalized === 'auto' ||
+        normalized === 'auto (ip based)' ||
+        normalized === 'auto (ip base)' ||
+        normalized === 'auto (no change)';
+}
+
 function resolveScreen(screen, width, height) {
     if (screen && asNumber(screen.width) && asNumber(screen.height)) {
         return {
@@ -745,8 +840,29 @@ function generateFingerprint(options = {}) {
         options.language &&
         options.language !== 'auto' &&
         !leaveLanguageUnmodified;
-    const language = hasLanguageOverride ? options.language : (leaveLanguageUnmodified ? 'none' : 'auto');
-    const languages = hasLanguageOverride ? normalizeLanguages(language, options.languages) : [];
+
+    // Resolve the timezone early: it drives the default locale so a profile does
+    // not end up with, for example, a US timezone and a Chinese UI language.
+    const explicitTimezone = options.timezone && !isAutoTimezoneValue(options.timezone);
+    const resolvedTimezone = explicitTimezone ? options.timezone : getRandom(TIMEZONE_POOL);
+    const tzLanguage = TIMEZONE_LANGUAGE_MAP[resolvedTimezone] || null;
+
+    let language;
+    let languages;
+    if (hasLanguageOverride) {
+        language = options.language;
+        languages = normalizeLanguages(language, options.languages);
+    } else if (leaveLanguageUnmodified) {
+        language = 'none';
+        languages = [];
+    } else if (tzLanguage) {
+        // Auto language: follow the timezone so locale and region agree.
+        language = tzLanguage[0];
+        languages = tzLanguage.slice();
+    } else {
+        language = 'auto';
+        languages = [];
+    }
 
     const webgl = resolveWebglProfile(runtimePlatform, options.webglProfile || options.webglProfileId, options.webgl);
     const tlsClientHello = resolveTlsClientHello(options.tlsClientHello, resolvedBrowserType, resolvedBrowserMajorVersion, uaMode);
@@ -767,8 +883,8 @@ function generateFingerprint(options = {}) {
         window: { ...screen },
         language,
         languages,
-        hardwareConcurrency: asNumber(options.hardwareConcurrency) || getRandom([4, 8, 12, 16]),
-        deviceMemory: asNumber(options.deviceMemory) || getRandom([2, 4, 8, 16]),
+        hardwareConcurrency: asNumber(options.hardwareConcurrency) || getRandom(HARDWARE_CONCURRENCY_POOL),
+        deviceMemory: asNumber(options.deviceMemory) || getRandom(DEVICE_MEMORY_POOL),
         canvasNoise: options.canvasNoise || {
             r: randInt(-5, 5),
             g: randInt(-5, 5),
@@ -777,7 +893,7 @@ function generateFingerprint(options = {}) {
         },
         audioNoise: typeof options.audioNoise === 'number' ? options.audioNoise : (Math.random() * 0.000001),
         noiseSeed: asNumber(options.noiseSeed) || generateCanvasSafeNoiseSeed(),
-        timezone: options.timezone || 'America/Los_Angeles',
+        timezone: resolvedTimezone,
         city: options.city || null,
         geolocation: options.geolocation || null,
         browserType,
@@ -842,14 +958,15 @@ function getInjectScript(fp, profileName, watermarkStyle) {
             const nativeFunctionStrings = new WeakMap();
             const originalFunctionToString = Function.prototype.toString;
             const originalToStringDescriptor = Object.getOwnPropertyDescriptor(Function.prototype, 'toString');
-            const patchedFunctionToString = new Proxy(originalFunctionToString, {
-                apply(target, thisArg, args) {
-                    if (nativeFunctionStrings.has(thisArg)) {
-                        return nativeFunctionStrings.get(thisArg);
-                    }
-                    return Reflect.apply(target, thisArg, args);
+            // Avoid a Proxy wrapper here: detectors can flag Function.prototype.toString
+            // itself for being a Proxy (creepjs: hasToStringProxy). A plain function
+            // that consults the WeakMap is indistinguishable from a native method.
+            const patchedFunctionToString = function toString() {
+                if (nativeFunctionStrings.has(this)) {
+                    return nativeFunctionStrings.get(this);
                 }
-            });
+                return Reflect.apply(originalFunctionToString, this, arguments);
+            };
             nativeFunctionStrings.set(
                 patchedFunctionToString,
                 Reflect.apply(originalFunctionToString, originalFunctionToString, [])
@@ -888,6 +1005,12 @@ function getInjectScript(fp, profileName, watermarkStyle) {
             const enableUaSpoof = fp.uaMode !== 'none';
             const enableWebglSpoof = !!(fp.webgl && !fp.webgl.disabled && fp.webglProfile !== 'none');
 
+            // Snapshot a few native values before we patch anything, so later
+            // spoofing can stay internally consistent with what the engine reports.
+            const originalScreenValues = {
+                depth: (window.screen && window.screen.colorDepth) || 24
+            };
+
             // --- 1. Basic automation markers cleanup ---
             try {
                 const cdcRegex = /cdc_[a-zA-Z0-9]+/;
@@ -901,38 +1024,139 @@ function getInjectScript(fp, profileName, watermarkStyle) {
                         try { delete window[k]; } catch (e) { }
                     }
                 });
-                if (!window.chrome) {
-                    Object.defineProperty(window, 'chrome', {
-                        value: {
-                            app: {
-                                isInstalled: false,
-                                InstallState: { DISABLED: 'disabled', INSTALLED: 'installed', NOT_INSTALLED: 'not_installed' },
-                                RunningState: { CANNOT_RUN: 'cannot_run', READY_TO_RUN: 'ready_to_run', RUNNING: 'running' }
-                            },
-                            runtime: {
-                                OnInstalledReason: { CHROME_UPDATE: 'chrome_update', INSTALL: 'install', SHARED_MODULE_UPDATE: 'shared_module_update', UPDATE: 'update' },
-                                PlatformArch: { ARM: 'arm', ARM64: 'arm64', X86_32: 'x86-32', X86_64: 'x86-64' },
-                                PlatformOs: { ANDROID: 'android', CROS: 'cros', LINUX: 'linux', MAC: 'mac', OPENBSD: 'openbsd', WIN: 'win' }
+                // Do not fabricate a partial window.chrome object. A hand-built stub
+                // is trivially detected (missing loadTimes/csi/runtime methods). A
+                // real CfT/Chrome build already provides a complete window.chrome;
+                // only clean up the automation leftovers that Puppeteer may add.
+                try {
+                    if (window.chrome && typeof window.chrome === 'object') {
+                        // Some Puppeteer versions attach chrome.cdc / chrome.app
+                        // automation markers. Remove only those known-bad keys.
+                        ['cdc', 'asyncScriptInfo'].forEach((k) => {
+                            if (k in window.chrome) {
+                                try { delete window.chrome[k]; } catch (e) { }
                             }
-                        },
-                        configurable: false,
-                        enumerable: true,
-                        writable: true
-                    });
+                        });
+                    }
+                } catch (e) { }
+            } catch (e) { }
+
+            // --- 1.1 navigator.webdriver fallback ---
+            // --disable-blink-features=AutomationControlled usually makes this
+            // undefined; force it to false so a renderer that still reports true
+            // cannot expose automation.
+            try {
+                if (navigator.webdriver !== false) {
+                    defineValueGetter(Navigator.prototype, 'webdriver', false, 'get webdriver');
                 }
             } catch (e) { }
 
             // --- 2. Screen and hardware fingerprint ---
             if (fp.screen && fp.screen.width && fp.screen.height) {
-                const screenWidth = fp.screen.width;
-                const screenHeight = fp.screen.height;
+                const screenWidth = Math.max(0, Math.floor(Number(fp.screen.width) || 0));
+                const screenHeight = Math.max(0, Math.floor(Number(fp.screen.height) || 0));
                 const availWidthInset = Math.max(0, Number(screen.width || 0) - Number(screen.availWidth || 0));
                 const availHeightInset = Math.max(0, Number(screen.height || 0) - Number(screen.availHeight || 0));
+                const availWidth = Math.max(0, screenWidth - availWidthInset);
+                const availHeight = Math.max(0, screenHeight - availHeightInset);
                 const screenPrototype = window.Screen?.prototype || Object.getPrototypeOf(screen);
                 defineValueGetter(screenPrototype, 'width', screenWidth, 'get width');
                 defineValueGetter(screenPrototype, 'height', screenHeight, 'get height');
-                defineValueGetter(screenPrototype, 'availWidth', Math.max(0, screenWidth - availWidthInset), 'get availWidth');
-                defineValueGetter(screenPrototype, 'availHeight', Math.max(0, screenHeight - availHeightInset), 'get availHeight');
+                defineValueGetter(screenPrototype, 'availWidth', availWidth, 'get availWidth');
+                defineValueGetter(screenPrototype, 'availHeight', availHeight, 'get availHeight');
+                // colorDepth/pixelDepth are 24 on most desktops; keep native if it is already sane.
+                try {
+                    const nativeDepth = Number(originalScreenValues.depth) || 24;
+                    defineValueGetter(screenPrototype, 'colorDepth', nativeDepth, 'get colorDepth');
+                    defineValueGetter(screenPrototype, 'pixelDepth', nativeDepth, 'get pixelDepth');
+                } catch (e) { }
+
+                // --- 2.1 Window size alignment (inner/outer) ---
+                // Detectors cross-check screen.* against window.* and matchMedia.
+                // Derive window metrics from the spoofed screen so all values agree.
+                const chromeHeight = 80;   // browser UI (tabs + address bar)
+                const chromeWidth = 16;    // window borders
+                const outerWidth = screenWidth;
+                const outerHeight = Math.max(0, screenHeight - 40);
+                const innerWidth = Math.max(0, outerWidth - chromeWidth);
+                const innerHeight = Math.max(0, outerHeight - chromeHeight);
+                const windowPrototype = window.Window?.prototype || Object.getPrototypeOf(window);
+                const defineWindowGetter = (key, value, nativeName) => {
+                    try {
+                        const descriptor = Object.getOwnPropertyDescriptor(windowPrototype, key);
+                        const getter = makeNative(function() { return value; }, nativeName || key, descriptor && descriptor.get);
+                        Object.defineProperty(windowPrototype, key, {
+                            get: getter,
+                            configurable: descriptor ? descriptor.configurable : true,
+                            enumerable: descriptor ? descriptor.enumerable : true
+                        });
+                    } catch (e) { }
+                };
+                defineWindowGetter('outerWidth', outerWidth, 'get outerWidth');
+                defineWindowGetter('outerHeight', outerHeight, 'get outerHeight');
+                defineWindowGetter('innerWidth', innerWidth, 'get innerWidth');
+                defineWindowGetter('innerHeight', innerHeight, 'get innerHeight');
+
+                // --- 2.2 matchMedia alignment ---
+                // Parse simple width/height queries and answer against spoofed dimensions.
+                try {
+                    const originalMatchMedia = window.matchMedia;
+                    if (typeof originalMatchMedia === 'function') {
+                        // Evaluate every (min|max)-(width|height) condition found in the
+                        // query string, plus simple (orientation: landscape/portrait)
+                        // checks, so combined media queries stay consistent with the
+                        // spoofed dimensions instead of falling back to native values.
+                        const evaluateQuery = (query) => {
+                            const text = String(query || '');
+                            let sawCondition = false;
+                            const rangeRe = /\(\s*(min|max)-(width|height)\s*:\s*(\d+)(?:px)?\s*\)/gi;
+                            let match;
+                            while ((match = rangeRe.exec(text)) !== null) {
+                                sawCondition = true;
+                                const mode = match[1].toLowerCase();
+                                const axis = match[2].toLowerCase();
+                                const threshold = Number(match[3]) || 0;
+                                const current = axis === 'width' ? innerWidth : innerHeight;
+                                const ok = mode === 'min' ? current >= threshold : current <= threshold;
+                                if (!ok) return false;
+                            }
+                            const orientationRe = /\(\s*orientation\s*:\s*(landscape|portrait)\s*\)/gi;
+                            while ((match = orientationRe.exec(text)) !== null) {
+                                sawCondition = true;
+                                const want = match[1].toLowerCase();
+                                const isLandscape = innerWidth >= innerHeight;
+                                const ok = want === 'landscape' ? isLandscape : !isLandscape;
+                                if (!ok) return false;
+                            }
+                            return sawCondition ? true : null;
+                        };
+                        const hookedMatchMedia = function matchMedia(query) {
+                            const list = originalMatchMedia.call(this, query);
+                            try {
+                                const result = evaluateQuery(query);
+                                if (result !== null) {
+                                    Object.defineProperty(list, 'matches', { get: makeNative(function() { return result; }, 'get matches'), configurable: true });
+                                }
+                            } catch (e) { }
+                            return list;
+                        };
+                        window.matchMedia = makeNative(hookedMatchMedia, 'matchMedia', originalMatchMedia);
+                    }
+                } catch (e) { }
+
+                // --- 2.3 Screen orientation alignment ---
+                try {
+                    const landscape = innerWidth >= innerHeight;
+                    const orientationType = landscape ? 'landscape-primary' : 'portrait-primary';
+                    const orientationAngle = landscape ? 0 : 90;
+                    const orientationObj = window.screen && window.screen.orientation;
+                    const orientationPrototype = (window.ScreenOrientation && window.ScreenOrientation.prototype) ||
+                        (orientationObj && Object.getPrototypeOf(orientationObj));
+                    if (orientationPrototype) {
+                        defineValueGetter(orientationPrototype, 'type', orientationType, 'get type');
+                        defineValueGetter(orientationPrototype, 'angle', orientationAngle, 'get angle');
+                    }
+                } catch (e) { }
             }
 
             if (fp.hardwareConcurrency) {
@@ -992,6 +1216,66 @@ function getInjectScript(fp, profileName, watermarkStyle) {
 
                 defineValueGetter(Navigator.prototype, 'userAgentData', uaData, 'get userAgentData');
             }
+
+            // --- 3.1 Permissions realism ---
+            // Real Chrome returns 'prompt' for most powerful features and only
+            // 'granted' for a handful of benign ones. Returning 'granted' for
+            // everything (a common automation tell) is replaced with a realistic
+            // default map. Permissions the user cannot decide keep 'denied'.
+            try {
+                const permissionDefaults = {
+                    accelerometer: 'granted',
+                    'ambient-light-sensor': 'granted',
+                    'background-sync': 'granted',
+                    gyroscope: 'granted',
+                    magnetometer: 'granted',
+                    'screen-wake-lock': 'granted',
+                    geolocation: 'prompt',
+                    notifications: 'prompt',
+                    camera: 'prompt',
+                    microphone: 'prompt',
+                    midi: 'prompt',
+                    clipboard: 'prompt',
+                    'persistent-storage': 'prompt',
+                    push: 'prompt',
+                    'speaker-selection': 'prompt',
+                    'storage-access': 'prompt',
+                    bluetooth: 'prompt',
+                    'payment-handler': 'prompt',
+                    'window-management': 'prompt',
+                    'display-capture': 'prompt',
+                    'local-fonts': 'prompt',
+                    'idle-detection': 'prompt',
+                    nfc: 'prompt',
+                    'background-fetch': 'prompt',
+                    'durable-storage': 'prompt',
+                    'sync-xhr': 'prompt'
+                };
+                const permissions = navigator.permissions;
+                const permissionsProto = (window.Permissions && window.Permissions.prototype) ||
+                    (permissions && Object.getPrototypeOf(permissions));
+                const originalQuery = permissionsProto && permissionsProto.query;
+                if (typeof originalQuery === 'function') {
+                    const hookedQuery = function query(descriptor) {
+                        const name = descriptor && typeof descriptor === 'object' ? String(descriptor.name || '') : '';
+                        const state = Object.prototype.hasOwnProperty.call(permissionDefaults, name)
+                            ? permissionDefaults[name]
+                            : null;
+                        if (state === null) {
+                            return originalQuery.apply(this, arguments);
+                        }
+                        const result = originalQuery.apply(this, arguments);
+                        try {
+                            Object.defineProperty(result, 'state', {
+                                get: makeNative(function() { return state; }, 'get state'),
+                                configurable: true
+                            });
+                        } catch (e) { }
+                        return result;
+                    };
+                    permissionsProto.query = makeNative(hookedQuery, 'query', originalQuery);
+                }
+            } catch (e) { }
 
             // --- 4. Geolocation ---
             if (fp.geolocation && typeof fp.geolocation.latitude === 'number' && typeof fp.geolocation.longitude === 'number') {
@@ -1461,14 +1745,13 @@ function getInjectScript(fp, profileName, watermarkStyle) {
                             const nativeFunctionStrings = new WeakMap();
                             const originalFunctionToString = Function.prototype.toString;
                             const originalToStringDescriptor = Object.getOwnPropertyDescriptor(Function.prototype, 'toString');
-                            const patchedFunctionToString = new Proxy(originalFunctionToString, {
-                                apply(target, thisArg, args) {
-                                    if (nativeFunctionStrings.has(thisArg)) {
-                                        return nativeFunctionStrings.get(thisArg);
-                                    }
-                                    return Reflect.apply(target, thisArg, args);
+                            // Same as the page realm: avoid a Proxy wrapper on toString.
+                            const patchedFunctionToString = function toString() {
+                                if (nativeFunctionStrings.has(this)) {
+                                    return nativeFunctionStrings.get(this);
                                 }
-                            });
+                                return Reflect.apply(originalFunctionToString, this, arguments);
+                            };
                             nativeFunctionStrings.set(
                                 patchedFunctionToString,
                                 Reflect.apply(originalFunctionToString, originalFunctionToString, [])
@@ -1500,7 +1783,7 @@ function getInjectScript(fp, profileName, watermarkStyle) {
                             };
 
                             const nav = self.navigator || {};
-                            const navProto = Object.getPrototypeOf(nav);
+                            const navProto = (self.Navigator && self.Navigator.prototype) || Object.getPrototypeOf(nav);
                             const targetPlatform = workerPayload.platform || '';
 
                             if (workerPayload.hardwareConcurrency) {
