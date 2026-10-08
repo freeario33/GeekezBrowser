@@ -2108,9 +2108,8 @@ function normalizeProxyStr(proxyStr) {
 
 function ensureProxyStrValid(proxyStr) {
     const raw = String(proxyStr || '').trim();
-    if (!raw) {
-        throw new Error('代理链接错误：不能为空');
-    }
+    // Empty input is treated as a direct connection.
+    if (!raw) return;
     if (isDirectProxy(raw)) return;
 
     try {
@@ -2323,6 +2322,10 @@ async function buildProfileFromInput(rawData, profiles, settings, existingProfil
         ensureProxyStrValid(proxyStr);
         // 标准化代理字符串，将简写格式转换为标准格式
         proxyStr = normalizeProxyStr(proxyStr);
+    }
+    // Empty proxy means a direct connection.
+    if (!String(proxyStr || '').trim()) {
+        proxyStr = 'direct';
     }
 
     const incomingFingerprint = data.fingerprint && typeof data.fingerprint === 'object' ? data.fingerprint : {};

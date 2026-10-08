@@ -348,10 +348,10 @@ onUnmounted(() => {
 });
 
 async function handleSave() {
-  const proxyLines = form.proxyStr.split('\n').map(l => l.trim()).filter(l => l);
+  let proxyLines = form.proxyStr.split('\n').map(l => l.trim()).filter(l => l);
+  // Empty proxy input means a direct connection (no proxy).
   if (proxyLines.length === 0) {
-    uiStore.showAlert(window.t('inputReq'));
-    return;
+    proxyLines = ['direct'];
   }
   const insecureWarning = getUnsupportedXrayInsecureWarning(proxyLines);
 
