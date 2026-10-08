@@ -151,6 +151,35 @@ This repository ships a manual, fork-friendly workflow at `.github/workflows/bui
 - Builds are **unsigned** (`CSC_IDENTITY_AUTO_DISCOVERY: false`); macOS may require manual approval on first launch.
 - A separate upstream workflow, **Build and Release**, only runs when a GitHub Release is published and is unrelated to this manual one.
 
+## 📂 Data Directory
+
+GeekEZ Browser stores all profiles, settings, and per-profile browser data in a single **data directory**. Its location is resolved at startup with the following priority:
+
+1. **Custom directory** — if set via the app's settings (`app-config.json`), this always wins.
+2. **App directory (default)** — a `BrowserProfiles` folder next to the executable (portable/unpacked builds). In development mode this is the project root.
+3. **User directory (fallback)** — if the app directory is not writable (e.g. installed under `Program Files`), it automatically falls back to the OS user-data directory.
+
+### Layout
+
+```
+BrowserProfiles/
+├── profiles.json            # all profile metadata (fingerprints, proxy, tags)
+├── settings.json            # global settings
+├── default-passwords.json   # default password config
+├── _extensions/             # user extensions
+└── <profile-uuid>/          # one folder per profile
+    ├── browser_data/        # Chromium user data
+    ├── passwords.json       # encrypted passwords
+    └── ip-base-cache.json
+```
+
+### Notes
+
+- The fallback user directory is `<userData>/BrowserProfiles` — on Windows `%APPDATA%\geekez-browser\BrowserProfiles`, on macOS `~/Library/Application Support/geekez-browser/BrowserProfiles`, on Linux `~/.config/geekez-browser/BrowserProfiles`.
+- The recycle bin (`_Trash_Bin`) always stays in the user-data directory, not the app directory.
+- Existing data is **not** migrated automatically. If you switch from the old user directory to the app directory, your old profiles remain in the user directory — copy them over, or point the app at the old folder in Settings.
+- Changing the data directory in Settings requires an app restart. Migration (copying) is optional and never deletes the original data.
+
 ## 🔍 Detection Status
 
 - ✅ **Browserscan**: All checks passed
