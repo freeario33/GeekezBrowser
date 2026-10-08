@@ -94,7 +94,36 @@ const BIN_PATH_LEGACY = path.join(BIN_DIR_LEGACY, process.platform === 'win32' ?
 
 // 自定义数据目录支持
 const APP_CONFIG_FILE = path.join(app.getPath('userData'), 'app-config.json');
-const DEFAULT_DATA_PATH = path.join(app.getPath('userData'), 'BrowserProfiles');
+// 回退目录：系统用户数据目录
+const USER_DATA_FALLBACK_PATH = path.join(app.getPath('userData'), 'BrowserProfiles');
+
+// 软件所在目录（打包后为 exe 同级目录；开发模式为项目根目录）
+function getAppDir() {
+    return app.isPackaged ? path.dirname(process.execPath) : app.getAppPath();
+}
+const APP_DIR = getAppDir();
+
+// 探测目录是否可写（写入临时文件再删除）
+function isDirWritable(dir) {
+    try {
+        fs.ensureDirSync(dir);
+        const probe = path.join(dir, `.geekez-write-test-${Date.now()}`);
+        fs.writeFileSync(probe, 'test');
+        fs.removeSync(probe);
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+// 计算默认数据目录：优先软件所在目录，不可写则回退到用户目录
+function resolveDefaultDataPath() {
+    const appDirData = path.join(APP_DIR, 'BrowserProfiles');
+    if (isDirWritable(appDirData)) return appDirData;
+    console.warn(`Data directory not writable: ${appDirData}, falling back to ${USER_DATA_FALLBACK_PATH}`);
+    return USER_DATA_FALLBACK_PATH;
+}
+const DEFAULT_DATA_PATH = resolveDefaultDataPath();
 
 // 读取自定义数据目录
 function getCustomDataPath() {
@@ -4816,7 +4845,10 @@ ipcMain.handle('get-data-path-info', async () => {
     return {
         currentPath: DATA_PATH,
         defaultPath: DEFAULT_DATA_PATH,
-        isCustom: DATA_PATH !== DEFAULT_DATA_PATH
+        fallbackPath: USER_DATA_FALLBACK_PATH,
+        isCustom: DATA_PATH !== DEFAULT_DATA_PATH,
+        isDefault: DATA_PATH === DEFAULT_DATA_PATH,
+        isFallback: DEFAULT_DATA_PATH === USER_DATA_FALLBACK_PATH
     };
 });
 
