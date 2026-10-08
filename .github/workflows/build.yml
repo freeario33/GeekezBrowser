@@ -19,12 +19,12 @@ on:
         default: false
         type: boolean
       win_x64:
-        description: 'Windows x64 (portable zip)'
+        description: 'Windows x64 (portable zip / 免安装版)'
         required: false
         default: false
         type: boolean
       win_arm64:
-        description: 'Windows ARM64 (portable zip)'
+        description: 'Windows ARM64 (portable zip / 免安装版)'
         required: false
         default: false
         type: boolean
