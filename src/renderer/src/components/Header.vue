@@ -117,7 +117,7 @@ function closeCheckingAlert() {
 }
 
 const openGithub = () => {
-    ipcService.openUrl('https://github.com/echohs/GeekezBrowser');
+    ipcService.openUrl('https://github.com/freeario33/GeekezBrowser');
 };
 
 const openHelp = () => {

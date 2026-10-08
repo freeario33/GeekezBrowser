@@ -21,4 +21,4 @@ Commercial licenses may define fees, term, deployment scope, redistribution righ
 
 This document is a licensing notice only. It does not grant any commercial, patent, or trademark rights. A commercial license is effective only when separately agreed in writing by the project owner.
 
-To request commercial authorization, contact the project owner through the [GeekEZ Browser GitHub repository](https://github.com/EchoHS/GeekezBrowser).
+To request commercial authorization, contact the project owner through the [GeekEZ Browser GitHub repository](https://github.com/freeario33/GeekezBrowser).

@@ -10,7 +10,7 @@
 
 **A fingerprint stealth browser built for e-commerce operations and multi-account management**
 
-[🇨🇳 中文说明 (Chinese)](docs/README_zh.md) | [📥 Download Releases](https://github.com/EchoHS/GeekezBrowser/releases)
+[🇨🇳 中文说明 (Chinese)](docs/README_zh.md) | [📥 Download Releases](https://github.com/freeario33/GeekezBrowser/releases)
 
 </div>
 
@@ -70,7 +70,7 @@ It is designed to solve multi-account association issues in cross-border e-comme
 ## 🚀 Quick Start
 
 ### Method 1: Download Installer (Recommended)
-Go to the [**Releases**](https://github.com/EchoHS/GeekezBrowser/releases) page and download the package for your platform:
+Go to the [**Releases**](https://github.com/freeario33/GeekezBrowser/releases) page and download the package for your platform:
 *   **Windows**: `GeekEZ Browser-{version}-win-x64.exe`
 *   **macOS (ARM64)**: `GeekEZ Browser-{version}-mac-arm64.dmg`
 *   **macOS (Intel)**: `GeekEZ Browser-{version}-mac-x64.dmg`
@@ -82,7 +82,7 @@ Go to the [**Releases**](https://github.com/EchoHS/GeekezBrowser/releases) page 
 
 1.  **Clone the repository**
     ```bash
-    git clone https://github.com/EchoHS/GeekezBrowser.git
+    git clone https://github.com/freeario33/GeekezBrowser.git
     cd GeekezBrowser
     ```
 

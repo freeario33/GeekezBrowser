@@ -3772,7 +3772,7 @@ ipcMain.handle('check-updates', async () => {
                 hasUpdate: true,
                 currentVersion,
                 latestVersion,
-                downloadUrl: releaseInfo.downloadUrl || 'https://github.com/EchoHS/GeekezBrowser/releases',
+                downloadUrl: releaseInfo.downloadUrl || 'https://github.com/freeario33/GeekezBrowser/releases',
                 message: 'appUpdateFound'
             };
         }

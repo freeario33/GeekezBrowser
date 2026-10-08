@@ -13,4 +13,4 @@ Without prior written permission, you may not:
 
 Truthful, nominative references to the project are permitted where allowed by applicable law, provided they do not imply endorsement or affiliation.
 
-Commercial or broader trademark permission must be obtained separately in writing from the project owner through the [GeekEZ Browser GitHub repository](https://github.com/EchoHS/GeekezBrowser).
+Commercial or broader trademark permission must be obtained separately in writing from the project owner through the [GeekEZ Browser GitHub repository](https://github.com/freeario33/GeekezBrowser).
