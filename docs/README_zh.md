@@ -121,6 +121,35 @@ npm run build:mac
 npm run build:linux
 ```
 
+## 📂 数据目录
+
+GeekEZ Browser 将全部环境（Profile）、设置以及每个环境的浏览器数据都保存在同一个 **数据目录** 中。程序启动时按以下优先级确定该目录：
+
+1. **自定义目录** —— 若在软件设置中指定过（记录在 `app-config.json`），则始终优先使用。
+2. **软件所在目录（默认）** —— 可执行文件同级的 `BrowserProfiles` 文件夹（绿色版/解压即用）。开发模式下为项目根目录。
+3. **用户目录（回退）** —— 若软件所在目录不可写（例如安装到 `Program Files`），会自动回退到系统用户数据目录。
+
+### 目录结构
+
+```
+BrowserProfiles/
+├── profiles.json            # 所有环境元数据（指纹、代理、标签）
+├── settings.json            # 全局设置
+├── default-passwords.json   # 默认密码配置
+├── _extensions/             # 用户扩展
+└── <profile-uuid>/          # 每个环境一个文件夹
+    ├── browser_data/        # Chromium 用户数据
+    ├── passwords.json       # 加密密码
+    └── ip-base-cache.json
+```
+
+### 说明
+
+- 回退的用户目录为 `<userData>/BrowserProfiles` —— Windows 下为 `%APPDATA%\geekez-browser\BrowserProfiles`，macOS 下为 `~/Library/Application Support/geekez-browser/BrowserProfiles`，Linux 下为 `~/.config/geekez-browser/BrowserProfiles`。
+- 回收站（`_Trash_Bin`）始终保留在用户数据目录下，不随数据目录移动。
+- 已有数据**不会自动迁移**。若从旧的用户目录切换到软件所在目录，旧环境仍留在用户目录中 —— 可手动复制，或在设置中把目录指向旧文件夹。
+- 在设置中更改数据目录需要重启应用。迁移（复制）是可选的，且永远不会删除原数据。
+
 ## 🔍 检测状态
 
 - ✅ **Browserscan**: 全部通过
