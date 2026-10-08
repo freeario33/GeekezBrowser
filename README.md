@@ -121,6 +121,36 @@ npm run build:mac
 npm run build:linux
 ```
 
+### Building via GitHub Actions (fork-friendly, no local toolchain)
+
+This repository ships a manual, fork-friendly workflow at `.github/workflows/build.yml` (shown in the **Actions** tab as **Build (manual)**). It builds installers on GitHub's runners and uploads them as downloadable **Artifacts** — no local Node/Electron setup required.
+
+**How to run**
+
+1. Push your branch to your own fork (this workflow lives on the default branch).
+2. Open the **Actions** tab, pick **Build (manual)** in the left sidebar, then click **Run workflow**.
+3. Set the inputs:
+
+   | Input | Meaning |
+   |-------|---------|
+   | `ref` | Optional. Git ref to build (branch, tag, or SHA). Leave empty to build the branch you selected in the dropdown. |
+   | `mac_arm64` | Tick to build macOS ARM64 (`.dmg`). |
+   | `mac_x64` | Tick to build macOS Intel x64 (`.dmg`). |
+   | `win_x64` | Tick to build Windows x64 (`.exe` NSIS + portable `.zip`). |
+   | `win_arm64` | Tick to build Windows ARM64 (`.exe` NSIS + portable `.zip`). |
+   | `linux_x64` | Tick to build Linux x64 (`.AppImage`). |
+   | `linux_arm64` | Tick to build Linux ARM64 (`.AppImage`). |
+
+4. **Tick at least one platform**, then click **Run workflow**. If nothing is ticked the `setup` job fails fast with `No platform selected`.
+5. When the run finishes, download each platform's build from the **Artifacts** section at the bottom of the run page (`darwin-arm64`, `darwin-x64`, `win32-x64`, `win32-arm64`, `linux-x64`, `linux-arm64`).
+
+**Notes**
+
+- Only the platforms you tick are built, so you can compile a single target (e.g. just `linux_x64`) to save CI minutes — macOS runners cost ~10x and Windows ~2x compared to Linux.
+- The workflow downloads the Xray core and the matching Chrome build before packaging, so artifacts are complete.
+- Builds are **unsigned** (`CSC_IDENTITY_AUTO_DISCOVERY: false`); macOS may require manual approval on first launch.
+- A separate upstream workflow, **Build and Release**, only runs when a GitHub Release is published and is unrelated to this manual one.
+
 ## 🔍 Detection Status
 
 - ✅ **Browserscan**: All checks passed
