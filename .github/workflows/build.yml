@@ -19,12 +19,12 @@ on:
         default: false
         type: boolean
       win_x64:
-        description: 'Windows x64 (nsis + portable zip)'
+        description: 'Windows x64 (portable zip)'
         required: false
         default: false
         type: boolean
       win_arm64:
-        description: 'Windows ARM64 (nsis + portable zip)'
+        description: 'Windows ARM64 (portable zip)'
         required: false
         default: false
         type: boolean
@@ -60,8 +60,8 @@ jobs:
           ALL='[
             {"key":"mac-arm64","selected":${{ inputs.mac_arm64 }},"platform":"macos-latest","os":"darwin","arch":"arm64","xray_asset":"Xray-macos-arm64-v8a.zip","build_cmd":"npm run build:mac"},
             {"key":"mac-x64","selected":${{ inputs.mac_x64 }},"platform":"macos-15-intel","os":"darwin","arch":"x64","xray_asset":"Xray-macos-64.zip","build_cmd":"npm run build:mac"},
-            {"key":"win-x64","selected":${{ inputs.win_x64 }},"platform":"windows-latest","os":"win32","arch":"x64","xray_asset":"Xray-windows-64.zip","build_cmd":"npm run build && npx electron-builder --win nsis zip --x64"},
-            {"key":"win-arm64","selected":${{ inputs.win_arm64 }},"platform":"windows-latest","os":"win32","arch":"arm64","xray_asset":"Xray-windows-arm64-v8a.zip","build_cmd":"npm run build && npx electron-builder --win nsis zip --arm64"},
+            {"key":"win-x64","selected":${{ inputs.win_x64 }},"platform":"windows-latest","os":"win32","arch":"x64","xray_asset":"Xray-windows-64.zip","build_cmd":"npm run build && npx electron-builder --win zip --x64"},
+            {"key":"win-arm64","selected":${{ inputs.win_arm64 }},"platform":"windows-latest","os":"win32","arch":"arm64","xray_asset":"Xray-windows-arm64-v8a.zip","build_cmd":"npm run build && npx electron-builder --win zip --arm64"},
             {"key":"linux-x64","selected":${{ inputs.linux_x64 }},"platform":"ubuntu-latest","os":"linux","arch":"x64","xray_asset":"Xray-linux-64.zip","build_cmd":"npm run build:linux"},
             {"key":"linux-arm64","selected":${{ inputs.linux_arm64 }},"platform":"ubuntu-24.04-arm","os":"linux","arch":"arm64","xray_asset":"Xray-linux-arm64-v8a.zip","build_cmd":"npm run build && npx electron-builder --linux --arm64"}
           ]'
@@ -169,9 +169,9 @@ jobs:
         run: |
           npm run build
           if ("${{ matrix.arch }}" -eq "arm64") {
-            npx electron-builder --win nsis zip --arm64
+            npx electron-builder --win zip --arm64
           } else {
-            npx electron-builder --win nsis zip --x64
+            npx electron-builder --win zip --x64
           }
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false

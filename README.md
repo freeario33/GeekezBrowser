@@ -136,8 +136,8 @@ This repository ships a manual, fork-friendly workflow at `.github/workflows/bui
    | `ref` | Optional. Git ref to build (branch, tag, or SHA). Leave empty to build the branch you selected in the dropdown. |
    | `mac_arm64` | Tick to build macOS ARM64 (`.dmg`). |
    | `mac_x64` | Tick to build macOS Intel x64 (`.dmg`). |
-   | `win_x64` | Tick to build Windows x64 (`.exe` NSIS + portable `.zip`). |
-   | `win_arm64` | Tick to build Windows ARM64 (`.exe` NSIS + portable `.zip`). |
+   | `win_x64` | Tick to build Windows x64 (portable `.zip`). |
+   | `win_arm64` | Tick to build Windows ARM64 (portable `.zip`). |
    | `linux_x64` | Tick to build Linux x64 (`.AppImage`). |
    | `linux_arm64` | Tick to build Linux ARM64 (`.AppImage`). |
 
